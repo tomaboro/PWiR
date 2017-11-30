@@ -1,82 +1,158 @@
-with Ada.Text_IO, Ada.Numerics.Float_Random;
+with Ada.Text_IO, Ada.Numerics.Discrete_Random, Ada.Numerics.Float_Random;
 use Ada.Text_IO, Ada.Numerics.Float_Random;
 
 procedure lab6 is
 
-task Zadanie_1A is
+task type Totalizator is
 	entry Start;
-	entry Losuj(Num: in out Float);
+	entry Losuj(Num: out Float);
 	entry Koniec;
-end Zadanie_1A;
+end Totalizator;
 
-task body Zadanie_1A is
+task body Totalizator is
 G: Generator;
+Rand: Float;
 begin
 	accept Start;
-	Put_Line("Zaczynam zadanie A");
 	loop 
+		Reset(G);
+		Rand := Random(G)*5.0 ;
 		select 
 			accept Koniec;
-				Put_Line("Kończę A");
 				exit;
 		or
-			accept Losuj(Num: in out Float) do
-				Reset(G);
-				Num := Random(G);
+			accept Losuj(Num: out Float) do
+				Num := Rand;
 			end Losuj;
-			Put_Line("Wylosowano");
 		end select;
 	end loop;
-end Zadanie_1A;
+end Totalizator;
 
-task type Zadanie_tmp is
-	entry Print;
-end Zadanie_tmp;
+type Kolory is (Czerowny,Niebieski,Zielony, Zolty, Magenta, Bialy, Czarny);
+type DniTygodnia is (Poniedzialek, Wtorek, Sroda, Czwartek, Piatek, Sobota, Niedziela);
+type Tablica6Elem is array (Integer range 1..6) of Float;
 
-task body Zadanie_tmp is
-begin
-	accept Print do
-		Put_Line("Zaczynam działanie");
-		delay 5.0;
-		Put_Line("Kończę działanie");
-	end Print;
-end Zadanie_tmp;
-
-task type Zadanie_Semafor is
+task type Totalizator2 is
 	entry Start;
-	entry Lock;
-	entry Quit;
-end Zadanie_Semafor;
+	entry Koniec;
+	entry Losuj(Num: out Float);
+	entry LosujKolor(Kolor: out Kolory);
+	entry LosujDzien(Dzien: out DniTygodnia);
+	entry Losuj6Elem(Tab: out Tablica6Elem);
+end Totalizator2;
 
-task body Zadanie_Semafor is 
-semafor: Boolean := true;
+package Rand_Kolor is new Ada.Numerics.Discrete_Random(Kolory);
+package Rand_Dzien is new Ada.Numerics.Discrete_Random(DniTygodnia);
+
+task body Totalizator2 is
+R1: Float;
+R2: Kolory;
+R3: DniTygodnia;
+R4: Tablica6Elem;
+
+G: Generator;
+G2: Rand_Kolor.Generator;
+G3: Rand_Dzien.Generator;
 begin
 	accept Start;
+	R1 := Random(G)*5.0;
+	R2 := Rand_Kolor.Random(G2);
+	R3 := Rand_Dzien.Random(G3);
+	For_Loop:
+		for I in Integer range 1..6 loop
+			R4(I) := Random(G)*50.0 - 1.0;
+	end loop For_Loop;
 	loop
 		select
-			accept Quit;
-				exit;
- 		or
-			when semafor => accept Lock do
-				Put_Line("Blokuję semafor");
-				semafor := false;
-				--Zadanie_tmp.Print;
-			end Lock;
-			Put_Line("Odblokowywuję semafor");
-			semafor := true;
+			accept Koniec;
+			exit;
+		or
+			accept Losuj(Num: out Float) do
+				Num:= R1;
+			end Losuj;
+			Reset(G);
+			R1 := Random(G);
+		or
+			accept LosujKolor(Kolor: out Kolory) do
+				Kolor := R2;
+			end LosujKolor;
+			Rand_Kolor.Reset(G2);
+			R2 := Rand_Kolor.Random(G2);
+		or
+			accept LosujDzien(Dzien: out DniTygodnia) do
+				Dzien := R3;
+			end LosujDzien;
+			Rand_Dzien.Reset(G3);
+			R3 := Rand_Dzien.Random(G3);
+		or
+			accept Losuj6Elem(Tab: out Tablica6Elem) do
+				For_Loop3:
+				for I in Integer range 1..6 loop
+					Tab(I) := R4(I);
+				end loop For_Loop3;
+			end Losuj6Elem;
+			For_Loop2:
+			for I in Integer range 1..6 loop
+				Reset(G);
+				R4(I) := Random(G)*50.0 - 1.0;
+			end loop For_Loop2;
+			Reset(G);
 		end select;
 	end loop;
-end Zadanie_Semafor;
+end Totalizator2;
 
-X,Y,Z: Float;
+task type SemaforBinarny is
+	entry Czekaj;
+	entry Sygnal;
+end SemaforBinarny;
+
+task body SemaforBinarny is
+locked: Boolean := false;
 begin
---	Zadanie_Semafor.Lock;
---	Zadanie_Semafor.Lock;
---	Zadanie_Semafor.Lock;
---	Zadanie_1A.Start;
---	Zadanie_1A.Koniec;
-	Put_Line("Trololo");
-	Zadanie_1A.Start;
-	Zadanie_1A.Koniec;
-	Put_Line("Lolololo");
+	loop
+		select
+			when not locked =>
+				accept Czekaj do
+					locked := true;
+				end Czekaj;
+		or
+			accept Sygnal;
+			locked := false;
+		end select;
+	end loop;
+end SemaforBinarny;
+
+task type SortowanieScalanie is
+	entry Start(StartWsk: in Integer; StopWsk: in Integer);
+	entry Sortuj;
+end SortowanieScalanie;
+
+type Ptr is access SortowanieScalanie;
+
+task body SortowanieScalanie is
+Startt: Integer;
+Stop: Integer;
+Middle: Integer;
+Z1 : Ptr;
+Z2 : Ptr;
+begin
+	accept Start(StartWsk: in Integer; StopWsk: in Integer) do
+		Startt := StartWsk;
+		Stop := StopWsk;
+	end Start;
+	
+	accept Sortuj;
+		if Startt < Stop then
+			Z1 := new SortowanieScalanie;
+			Z2 := new SortowanieScalanie;
+			Middle := Startt + (Stop-Startt)/2;
+			Z1.Start(Startt,Middle);
+			Z2.Start(Middle+1,Stop);
+			Z1.Sortuj;
+			Z2.Sortuj;
+		end if;
+end SortowanieScalanie;
+
+begin
+	Put_Line("1234");
 end lab6;
